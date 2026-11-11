@@ -126,6 +126,25 @@ body {
   background: var(--column-bg);
 }
 
+.guest-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.625rem 1.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.guest-btn:hover {
+  background: var(--column-bg);
+  color: var(--foreground);
+}
+
 /* Board */
 .board {
   display: grid;

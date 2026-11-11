@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { getCards, addCard, updateCard, deleteCard, type KanbanCard } from "@/lib/firestore";
+import { getCardsLocal, addCardLocal, updateCardLocal, deleteCardLocal } from "@/lib/local-storage";
 
 const COLUMNS = [
   { id: "todo" as const, label: "To Do" },
@@ -11,11 +12,15 @@ const COLUMNS = [
 ];
 
 export default function KanbanBoard() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [cards, setCards] = useState<KanbanCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCardTitle, setNewCardTitle] = useState("");
   const [addingTo, setAddingTo] = useState<string | null>(null);
+
+  const store = isGuest
+    ? { get: getCardsLocal, add: addCardLocal, update: updateCardLocal, remove: deleteCardLocal }
+    : { get: getCards, add: addCard, update: updateCard, remove: deleteCard };
 
   useEffect(() => {
     if (!user) return;
@@ -25,7 +30,7 @@ export default function KanbanBoard() {
   async function loadCards() {
     if (!user) return;
     setLoading(true);
-    const data = await getCards(user.uid);
+    const data = await store.get(user.uid);
     setCards(data);
     setLoading(false);
   }
@@ -33,19 +38,19 @@ export default function KanbanBoard() {
   async function handleAddCard(column: KanbanCard["column"]) {
     if (!user || !newCardTitle.trim()) return;
     const colCards = cards.filter((c) => c.column === column);
-    await addCard(user.uid, newCardTitle.trim(), column, colCards.length);
+    await store.add(user.uid, newCardTitle.trim(), column, colCards.length);
     setNewCardTitle("");
     setAddingTo(null);
     await loadCards();
   }
 
   async function handleMoveCard(cardId: string, newColumn: KanbanCard["column"]) {
-    await updateCard(cardId, { column: newColumn });
+    await store.update(cardId, { column: newColumn });
     await loadCards();
   }
 
   async function handleDeleteCard(cardId: string) {
-    await deleteCard(cardId);
+    await store.remove(cardId);
     await loadCards();
   }
 
