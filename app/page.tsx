@@ -1,13 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import LoginButton from "./components/login-button";
 import GuestButton from "./components/guest-button";
 import Header from "./components/header";
 import KanbanBoard from "./components/kanban-board";
+import TrackerView from "./components/tracker-view";
+
+type Tab = "board" | "trackers";
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const [tab, setTab] = useState<Tab>("board");
 
   if (loading) {
     return (
@@ -21,8 +26,8 @@ export default function Home() {
     return (
       <div className="center-screen">
         <div className="login-card">
-          <h1>Kanban Board</h1>
-          <p>Sign in to manage your tasks</p>
+          <h1>Dashboard</h1>
+          <p>Sign in to manage your tasks and trackers</p>
           <LoginButton />
           <GuestButton />
         </div>
@@ -33,8 +38,17 @@ export default function Home() {
   return (
     <>
       <Header />
+      <nav className="tab-bar">
+        <button className={`tab-btn ${tab === "board" ? "tab-active" : ""}`} onClick={() => setTab("board")}>
+          Board
+        </button>
+        <button className={`tab-btn ${tab === "trackers" ? "tab-active" : ""}`} onClick={() => setTab("trackers")}>
+          Trackers
+        </button>
+      </nav>
       <main>
-        <KanbanBoard />
+        {tab === "board" && <KanbanBoard />}
+        {tab === "trackers" && <TrackerView />}
       </main>
     </>
   );

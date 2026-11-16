@@ -22,6 +22,12 @@ export interface KanbanColumn {
 
 export type Priority = "low" | "medium" | "high";
 
+export interface Subtask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
 export interface KanbanCard {
   id: string;
   title: string;
@@ -30,12 +36,32 @@ export interface KanbanCard {
   priority: Priority;
   order: number;
   userId: string;
+  subtasks: Subtask[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
+export interface Tracker {
+  id: string;
+  label: string;
+  icon: string;
+  userId: string;
+  order: number;
+  createdAt: Timestamp;
+}
+
+export interface TrackerEntry {
+  id: string;
+  trackerId: string;
+  count: number;
+  date: string; // YYYY-MM-DD
+  userId: string;
+}
+
 const CARDS_COLLECTION = "cards";
 const COLUMNS_COLLECTION = "columns";
+const TRACKERS_COLLECTION = "trackers";
+const TRACKER_ENTRIES_COLLECTION = "tracker_entries";
 
 export const DEFAULT_COLUMNS: KanbanColumn[] = [
   { id: "todo", label: "To Do", order: 0 },
@@ -94,6 +120,7 @@ export async function addCard(
     description: "",
     column,
     priority,
+    subtasks: [],
     order,
     userId,
     createdAt: serverTimestamp(),
@@ -104,7 +131,7 @@ export async function addCard(
 
 export async function updateCard(
   cardId: string,
-  data: Partial<Pick<KanbanCard, "title" | "description" | "column" | "order" | "priority">>
+  data: Partial<Pick<KanbanCard, "title" | "description" | "column" | "order" | "priority" | "subtasks">>
 ) {
   const db = getFirebaseDb();
   await updateDoc(doc(db, CARDS_COLLECTION, cardId), {
@@ -116,4 +143,68 @@ export async function updateCard(
 export async function deleteCard(cardId: string) {
   const db = getFirebaseDb();
   await deleteDoc(doc(db, CARDS_COLLECTION, cardId));
+}
+
+// Trackers
+export async function getTrackers(userId: string): Promise<Tracker[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, TRACKERS_COLLECTION),
+    where("userId", "==", userId),
+    orderBy("order")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Tracker);
+}
+
+export async function addTracker(userId: string, label: string, icon: string, order: number): Promise<string> {
+  const db = getFirebaseDb();
+  const ref = await addDoc(collection(db, TRACKERS_COLLECTION), {
+    label,
+    icon,
+    userId,
+    order,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function deleteTracker(trackerId: string) {
+  const db = getFirebaseDb();
+  await deleteDoc(doc(db, TRACKERS_COLLECTION, trackerId));
+}
+
+// Tracker Entries
+export async function getTrackerEntries(userId: string, trackerId: string): Promise<TrackerEntry[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, TRACKER_ENTRIES_COLLECTION),
+    where("userId", "==", userId),
+    where("trackerId", "==", trackerId),
+    orderBy("date")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as TrackerEntry);
+}
+
+export async function upsertTrackerEntry(userId: string, trackerId: string, date: string, count: number) {
+  const db = getFirebaseDb();
+  const docId = `${userId}_${trackerId}_${date}`;
+  await setDoc(doc(db, TRACKER_ENTRIES_COLLECTION, docId), {
+    trackerId,
+    count,
+    date,
+    userId,
+  });
+}
+
+export async function getAllTrackerEntries(userId: string): Promise<TrackerEntry[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, TRACKER_ENTRIES_COLLECTION),
+    where("userId", "==", userId),
+    orderBy("date")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as TrackerEntry);
 }

@@ -6,7 +6,7 @@ import {
   getCards, addCard, updateCard, deleteCard,
   getColumns, saveColumns,
   DEFAULT_COLUMNS,
-  type KanbanCard, type KanbanColumn, type Priority,
+  type KanbanCard, type KanbanColumn, type Priority, type Subtask,
 } from "@/lib/firestore";
 import {
   getCardsLocal, addCardLocal, updateCardLocal, deleteCardLocal,
@@ -28,6 +28,8 @@ export default function KanbanBoard() {
   const [editingColumns, setEditingColumns] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [newSubtask, setNewSubtask] = useState("");
 
   const cardStore = isGuest
     ? { get: getCardsLocal, add: addCardLocal, update: updateCardLocal, remove: deleteCardLocal }
@@ -73,6 +75,29 @@ export default function KanbanBoard() {
 
   async function handlePriorityChange(cardId: string, priority: Priority) {
     await cardStore.update(cardId, { priority });
+    await loadAll();
+  }
+
+  async function handleAddSubtask(card: KanbanCard) {
+    if (!newSubtask.trim()) return;
+    const sub: Subtask = { id: crypto.randomUUID(), title: newSubtask.trim(), done: false };
+    const subtasks = [...(card.subtasks || []), sub];
+    await cardStore.update(card.id, { subtasks });
+    setNewSubtask("");
+    await loadAll();
+  }
+
+  async function handleToggleSubtask(card: KanbanCard, subId: string) {
+    const subtasks = (card.subtasks || []).map((s) =>
+      s.id === subId ? { ...s, done: !s.done } : s
+    );
+    await cardStore.update(card.id, { subtasks });
+    await loadAll();
+  }
+
+  async function handleDeleteSubtask(card: KanbanCard, subId: string) {
+    const subtasks = (card.subtasks || []).filter((s) => s.id !== subId);
+    await cardStore.update(card.id, { subtasks });
     await loadAll();
   }
 
@@ -163,45 +188,91 @@ export default function KanbanBoard() {
                 <span className="card-count">{colCards.length}</span>
               </div>
               <div className="card-list">
-                {colCards.map((card) => (
-                  <div key={card.id} className={`card priority-${card.priority || "medium"}`}>
-                    <div className="card-body">
-                      <div className="card-title">{card.title}</div>
-                      <div className="card-meta">
-                        <select
-                          value={card.priority || "medium"}
-                          onChange={(e) => handlePriorityChange(card.id, e.target.value as Priority)}
-                          className="priority-select"
+                {colCards.map((card) => {
+                  const subs = card.subtasks || [];
+                  const doneCount = subs.filter((s) => s.done).length;
+                  const isExpanded = expandedCard === card.id;
+                  return (
+                    <div key={card.id} className={`card priority-${card.priority || "medium"}`}>
+                      <div className="card-body">
+                        <div
+                          className="card-title"
+                          onClick={() => setExpandedCard(isExpanded ? null : card.id)}
+                          style={{ cursor: "pointer" }}
                         >
-                          {PRIORITY_OPTIONS.map((p) => (
-                            <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
-                          ))}
-                        </select>
+                          {card.title}
+                        </div>
+                        <div className="card-meta">
+                          <select
+                            value={card.priority || "medium"}
+                            onChange={(e) => handlePriorityChange(card.id, e.target.value as Priority)}
+                            className="priority-select"
+                          >
+                            {PRIORITY_OPTIONS.map((p) => (
+                              <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
+                            ))}
+                          </select>
+                          {subs.length > 0 && (
+                            <span className="subtask-badge" onClick={() => setExpandedCard(isExpanded ? null : card.id)}>
+                              {doneCount}/{subs.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="card-actions">
-                      {colIdx > 0 && (
-                        <button
-                          onClick={() => handleMoveCard(card.id, columns[colIdx - 1].id)}
-                          title={`Move to ${columns[colIdx - 1].label}`}
-                        >
-                          ←
+                      <div className="card-actions">
+                        {colIdx > 0 && (
+                          <button
+                            onClick={() => handleMoveCard(card.id, columns[colIdx - 1].id)}
+                            title={`Move to ${columns[colIdx - 1].label}`}
+                          >
+                            ←
+                          </button>
+                        )}
+                        {colIdx < columns.length - 1 && (
+                          <button
+                            onClick={() => handleMoveCard(card.id, columns[colIdx + 1].id)}
+                            title={`Move to ${columns[colIdx + 1].label}`}
+                          >
+                            →
+                          </button>
+                        )}
+                        <button onClick={() => handleDeleteCard(card.id)} title="Delete" className="delete-btn">
+                          ×
                         </button>
+                      </div>
+                      {isExpanded && (
+                        <div className="subtask-section">
+                          {subs.length > 0 && (
+                            <div className="subtask-progress">
+                              <div className="subtask-progress-bar" style={{ width: `${subs.length ? (doneCount / subs.length) * 100 : 0}%` }} />
+                            </div>
+                          )}
+                          <ul className="subtask-list">
+                            {subs.map((sub) => (
+                              <li key={sub.id} className={`subtask-item ${sub.done ? "subtask-done" : ""}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={sub.done}
+                                  onChange={() => handleToggleSubtask(card, sub.id)}
+                                />
+                                <span>{sub.title}</span>
+                                <button className="subtask-del" onClick={() => handleDeleteSubtask(card, sub.id)}>×</button>
+                              </li>
+                            ))}
+                          </ul>
+                          <form className="subtask-add" onSubmit={(e) => { e.preventDefault(); handleAddSubtask(card); }}>
+                            <input
+                              value={newSubtask}
+                              onChange={(e) => setNewSubtask(e.target.value)}
+                              placeholder="Add subtask..."
+                              className="subtask-input"
+                            />
+                          </form>
+                        </div>
                       )}
-                      {colIdx < columns.length - 1 && (
-                        <button
-                          onClick={() => handleMoveCard(card.id, columns[colIdx + 1].id)}
-                          title={`Move to ${columns[colIdx + 1].label}`}
-                        >
-                          →
-                        </button>
-                      )}
-                      <button onClick={() => handleDeleteCard(card.id)} title="Delete" className="delete-btn">
-                        ×
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {addingTo === col.id ? (
                 <form
