@@ -9,7 +9,7 @@ export default function Header() {
 
   return (
     <header className="header">
-      <h1>Kanban Board</h1>
+      <h1>Dashboard</h1>
       <div className="header-user">
         {user.photoURL && (
           <img src={user.photoURL} alt="" className="avatar" referrerPolicy="no-referrer" />
