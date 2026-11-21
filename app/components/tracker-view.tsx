@@ -81,20 +81,28 @@ export default function TrackerView() {
   async function loadAll() {
     if (!user) return;
     setLoading(true);
-    const [trks, entries] = await Promise.all([
-      store.getTrackers(user.uid),
-      store.getAllEntries(user.uid),
-    ]);
-    setTrackers(trks);
-    setAllEntries(entries);
-    const todayStr = today();
-    const counts: Record<string, number> = {};
-    for (const t of trks) {
-      const entry = entries.find((e) => e.trackerId === t.id && e.date === todayStr);
-      counts[t.id] = entry?.count || 0;
+    try {
+      const [trks, entries] = await Promise.all([
+        store.getTrackers(user.uid),
+        store.getAllEntries(user.uid),
+      ]);
+      setTrackers(trks);
+      setAllEntries(entries);
+      const todayStr = today();
+      const counts: Record<string, number> = {};
+      for (const t of trks) {
+        const entry = entries.find((e) => e.trackerId === t.id && e.date === todayStr);
+        counts[t.id] = entry?.count || 0;
+      }
+      setTodayCounts(counts);
+    } catch (err) {
+      console.error("Failed to load tracker data:", err);
+      setTrackers([]);
+      setAllEntries([]);
+      setTodayCounts({});
+    } finally {
+      setLoading(false);
     }
-    setTodayCounts(counts);
-    setLoading(false);
   }
 
   async function handleIncrement(trackerId: string, delta: number) {

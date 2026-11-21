@@ -47,10 +47,17 @@ export default function KanbanBoard() {
   async function loadAll() {
     if (!user) return;
     setLoading(true);
-    const [cols, data] = await Promise.all([colStore.get(user.uid), cardStore.get(user.uid)]);
-    setColumns(cols);
-    setCards(data);
-    setLoading(false);
+    try {
+      const [cols, data] = await Promise.all([colStore.get(user.uid), cardStore.get(user.uid)]);
+      setColumns(cols);
+      setCards(data);
+    } catch (err) {
+      console.error("Failed to load board data:", err);
+      setColumns(DEFAULT_COLUMNS);
+      setCards([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleAddCard(column: string) {
