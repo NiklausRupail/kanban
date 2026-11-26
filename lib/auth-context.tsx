@@ -31,18 +31,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    return onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser as User & { isGuest?: false });
-      } else {
-        try {
-          const saved = localStorage.getItem(GUEST_KEY);
-          if (saved) setUser(JSON.parse(saved));
-        } catch {}
-      }
+    let unsubscribe: (() => void) | undefined;
+    let settled = false;
+
+    function fallbackToGuest() {
+      if (settled) return;
+      settled = true;
+      try {
+        const saved = localStorage.getItem(GUEST_KEY);
+        if (saved) setUser(JSON.parse(saved));
+      } catch {}
       setLoading(false);
-    });
+    }
+
+    try {
+      const auth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        settled = true;
+        if (firebaseUser) {
+          setUser(firebaseUser as User & { isGuest?: false });
+        } else {
+          try {
+            const saved = localStorage.getItem(GUEST_KEY);
+            if (saved) setUser(JSON.parse(saved));
+          } catch {}
+        }
+        setLoading(false);
+      });
+    } catch {
+      fallbackToGuest();
+    }
+
+    const timeout = setTimeout(fallbackToGuest, 5000);
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe?.();
+    };
   }, []);
 
   async function signInWithGoogle() {
