@@ -8,6 +8,7 @@ import {
   DEFAULT_COLUMNS,
   type KanbanCard, type KanbanColumn, type Priority, type Subtask,
 } from "@/lib/firestore";
+import { reportFirestoreError } from "./firestore-error-toast";
 import {
   getCardsLocal, addCardLocal, updateCardLocal, deleteCardLocal,
   getColumnsLocal, saveColumnsLocal,
@@ -53,6 +54,7 @@ export default function KanbanBoard() {
       setCards(data);
     } catch (err) {
       console.error("Failed to load board data:", err);
+      reportFirestoreError(err);
       setColumns(DEFAULT_COLUMNS);
       setCards([]);
     } finally {

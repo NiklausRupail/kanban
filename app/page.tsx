@@ -9,6 +9,7 @@ import KanbanBoard from "./components/kanban-board";
 import TrackerView from "./components/tracker-view";
 import ExpensesView from "./components/expenses-view";
 import InventoryView from "./components/inventory-view";
+import FirestoreErrorToast from "./components/firestore-error-toast";
 
 type Tab = "board" | "trackers" | "expenses" | "inventory";
 
@@ -39,6 +40,7 @@ export default function Home() {
 
   return (
     <>
+      <FirestoreErrorToast />
       <Header />
       <nav className="tab-bar">
         <button className={`tab-btn ${tab === "board" ? "tab-active" : ""}`} onClick={() => setTab("board")}>

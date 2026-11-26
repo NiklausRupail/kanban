@@ -9,6 +9,7 @@ import {
 import {
   getInventoryLocal, addInventoryItemLocal, updateInventoryItemLocal, deleteInventoryItemLocal,
 } from "@/lib/local-storage";
+import { reportFirestoreError } from "./firestore-error-toast";
 
 const INVENTORY_ICONS = ["🗑️", "🧻", "🧽", "🧴", "👕", "🧦", "🧤", "🛁", "🧹", "🧊", "💡", "🔋", "📦", "🧈", "☕"];
 const DEFAULT_UNITS = ["szt", "rolek", "worków", "opakowań", "par", "butelek"];
@@ -37,9 +38,16 @@ export default function InventoryView() {
   async function loadItems() {
     if (!user) return;
     setLoading(true);
-    const data = await store.get(user.uid);
-    setItems(data);
-    setLoading(false);
+    try {
+      const data = await store.get(user.uid);
+      setItems(data);
+    } catch (err) {
+      console.error("Failed to load inventory:", err);
+      reportFirestoreError(err);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleAdd() {

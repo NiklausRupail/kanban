@@ -10,6 +10,7 @@ import {
 import {
   getExpensesLocal, addExpenseLocal, deleteExpenseLocal,
 } from "@/lib/local-storage";
+import { reportFirestoreError } from "./firestore-error-toast";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -91,9 +92,16 @@ export default function ExpensesView() {
   async function loadExpenses() {
     if (!user) return;
     setLoading(true);
-    const data = await store.get(user.uid, month);
-    setExpenses(data);
-    setLoading(false);
+    try {
+      const data = await store.get(user.uid, month);
+      setExpenses(data);
+    } catch (err) {
+      console.error("Failed to load expenses:", err);
+      reportFirestoreError(err);
+      setExpenses([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleAdd() {

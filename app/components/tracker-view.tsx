@@ -11,6 +11,7 @@ import {
   getTrackersLocal, addTrackerLocal, deleteTrackerLocal,
   getTrackerEntriesLocal, upsertTrackerEntryLocal, getAllTrackerEntriesLocal,
 } from "@/lib/local-storage";
+import { reportFirestoreError } from "./firestore-error-toast";
 
 const ICONS = ["🚬", "⚡", "☕", "🍺", "💊", "🏃", "💧", "🍔", "📖", "🎮"];
 
@@ -97,6 +98,7 @@ export default function TrackerView() {
       setTodayCounts(counts);
     } catch (err) {
       console.error("Failed to load tracker data:", err);
+      reportFirestoreError(err);
       setTrackers([]);
       setAllEntries([]);
       setTodayCounts({});
