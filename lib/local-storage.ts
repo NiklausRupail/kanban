@@ -1,10 +1,12 @@
-import type { KanbanCard, KanbanColumn, Tracker, TrackerEntry } from "./firestore";
+import type { KanbanCard, KanbanColumn, Tracker, TrackerEntry, Expense, InventoryItem } from "./firestore";
 import { DEFAULT_COLUMNS } from "./firestore";
 
 const CARDS_KEY = "kanban-cards";
 const COLUMNS_KEY = "kanban-columns";
 const TRACKERS_KEY = "kanban-trackers";
 const TRACKER_ENTRIES_KEY = "kanban-tracker-entries";
+const EXPENSES_KEY = "kanban-expenses";
+const INVENTORY_KEY = "kanban-inventory";
 
 function readCards(): KanbanCard[] {
   try {
@@ -146,4 +148,100 @@ export async function getAllTrackerEntriesLocal(userId: string): Promise<Tracker
   return readEntries()
     .filter((e) => e.userId === userId)
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Expenses
+function readExpenses(): Expense[] {
+  try {
+    const raw = localStorage.getItem(EXPENSES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeExpenses(expenses: Expense[]) {
+  try {
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+  } catch {}
+}
+
+export async function getExpensesLocal(userId: string, month?: string): Promise<Expense[]> {
+  let all = readExpenses()
+    .filter((e) => e.userId === userId)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (month) all = all.filter((e) => e.date.startsWith(month));
+  return all;
+}
+
+export async function addExpenseLocal(
+  userId: string,
+  amount: number,
+  category: string,
+  subcategory: string,
+  description: string,
+  date: string
+): Promise<string> {
+  const expenses = readExpenses();
+  const id = crypto.randomUUID();
+  const now = Date.now() as unknown as Expense["createdAt"];
+  expenses.push({ id, userId, amount, category, subcategory, description, date, createdAt: now });
+  writeExpenses(expenses);
+  return id;
+}
+
+export async function deleteExpenseLocal(expenseId: string) {
+  writeExpenses(readExpenses().filter((e) => e.id !== expenseId));
+}
+
+// Inventory
+function readInventory(): InventoryItem[] {
+  try {
+    const raw = localStorage.getItem(INVENTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeInventory(items: InventoryItem[]) {
+  try {
+    localStorage.setItem(INVENTORY_KEY, JSON.stringify(items));
+  } catch {}
+}
+
+export async function getInventoryLocal(userId: string): Promise<InventoryItem[]> {
+  return readInventory().filter((i) => i.userId === userId);
+}
+
+export async function addInventoryItemLocal(
+  userId: string,
+  name: string,
+  quantity: number,
+  unit: string,
+  icon: string,
+  lowThreshold: number
+): Promise<string> {
+  const items = readInventory();
+  const id = crypto.randomUUID();
+  const now = Date.now() as unknown as InventoryItem["updatedAt"];
+  items.push({ id, userId, name, quantity, unit, icon, lowThreshold, updatedAt: now });
+  writeInventory(items);
+  return id;
+}
+
+export async function updateInventoryItemLocal(
+  itemId: string,
+  data: Partial<Pick<InventoryItem, "name" | "quantity" | "unit" | "icon" | "lowThreshold">>
+) {
+  const items = readInventory();
+  const idx = items.findIndex((i) => i.id === itemId);
+  if (idx !== -1) {
+    items[idx] = { ...items[idx], ...data, updatedAt: Date.now() as unknown as InventoryItem["updatedAt"] };
+    writeInventory(items);
+  }
+}
+
+export async function deleteInventoryItemLocal(itemId: string) {
+  writeInventory(readInventory().filter((i) => i.id !== itemId));
 }

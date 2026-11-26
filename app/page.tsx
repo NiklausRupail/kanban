@@ -7,8 +7,10 @@ import GuestButton from "./components/guest-button";
 import Header from "./components/header";
 import KanbanBoard from "./components/kanban-board";
 import TrackerView from "./components/tracker-view";
+import ExpensesView from "./components/expenses-view";
+import InventoryView from "./components/inventory-view";
 
-type Tab = "board" | "trackers";
+type Tab = "board" | "trackers" | "expenses" | "inventory";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -45,10 +47,18 @@ export default function Home() {
         <button className={`tab-btn ${tab === "trackers" ? "tab-active" : ""}`} onClick={() => setTab("trackers")}>
           Trackers
         </button>
+        <button className={`tab-btn ${tab === "expenses" ? "tab-active" : ""}`} onClick={() => setTab("expenses")}>
+          Expenses
+        </button>
+        <button className={`tab-btn ${tab === "inventory" ? "tab-active" : ""}`} onClick={() => setTab("inventory")}>
+          Inventory
+        </button>
       </nav>
       <main>
         {tab === "board" && <KanbanBoard />}
         {tab === "trackers" && <TrackerView />}
+        {tab === "expenses" && <ExpensesView />}
+        {tab === "inventory" && <InventoryView />}
       </main>
     </>
   );

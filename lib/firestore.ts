@@ -58,10 +58,53 @@ export interface TrackerEntry {
   userId: string;
 }
 
+export interface Expense {
+  id: string;
+  userId: string;
+  amount: number;
+  category: string;
+  subcategory: string;
+  description: string;
+  date: string; // YYYY-MM-DD
+  createdAt: Timestamp;
+}
+
+export interface InventoryItem {
+  id: string;
+  userId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  icon: string;
+  lowThreshold: number;
+  updatedAt: Timestamp;
+}
+
+export interface ExpenseCategory {
+  name: string;
+  subcategories: string[];
+}
+
+export const DEFAULT_EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  { name: "Jedzenie", subcategories: ["Jedzenie dom", "Jedzenie miasto", "Jedzenie praca", "Alkohol", "Inne"] },
+  { name: "Kobiety Dragi Lasery", subcategories: ["Dupy", "Wkłady liquidy Worki", "Mieszkanie", "Prąd", "Internet", "Gaz"] },
+  { name: "Transport", subcategories: ["Paliwo do auta", "Przeglądy i naprawy auta", "Wyposażenie dodatkowe", "Myjnia", "Bilet komunikacji miejskiej", "Hulajnoga", "Taxi", "Inne"] },
+  { name: "Rozrywka i Edukacja", subcategories: ["Gry", "Hobby", "Hotele wyjazdy", "Kursy i Certyfikaty", "Polibuda"] },
+  { name: "Zdrowie i Higiena", subcategories: ["Lekarz", "Badania", "Lekarstwa", "Fryzjer", "Inne"] },
+  { name: "Ubranie", subcategories: ["Ubranie zwykłe", "Ubranie sportowe", "Buty", "Dodatki", "Inne"] },
+  { name: "Edukacja", subcategories: ["Certyfikaty i kursy", "Wpłaty za semestr", "Inne"] },
+  { name: "Rozrywka", subcategories: ["Koncerty", "Hobby", "Hotel / Turystyka", "Inne"] },
+  { name: "Inne wydatki", subcategories: ["Dobroczynność", "Prezenty", "Sprzęt RTV", "Oprogramowanie", "Podatki", "Inne"] },
+  { name: "Spłata długów", subcategories: ["Kredyt hipoteczny", "Kredyt konsumpcyjny", "Pożyczka osobista", "Inne"] },
+  { name: "Budowanie oszczędności", subcategories: ["Fundusz awaryjny", "Fundusz wydatków nieregularnych", "Poduszka finansowa", "Konto emerytalne IKE/IKZE", "Nadpłata długów", "Fundusz: wakacje", "Fundusz: prezenty świąteczne", "Inne"] },
+];
+
 const CARDS_COLLECTION = "cards";
 const COLUMNS_COLLECTION = "columns";
 const TRACKERS_COLLECTION = "trackers";
 const TRACKER_ENTRIES_COLLECTION = "tracker_entries";
+const EXPENSES_COLLECTION = "expenses";
+const INVENTORY_COLLECTION = "inventory";
 
 export const DEFAULT_COLUMNS: KanbanColumn[] = [
   { id: "todo", label: "To Do", order: 0 },
@@ -207,4 +250,93 @@ export async function getAllTrackerEntries(userId: string): Promise<TrackerEntry
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as TrackerEntry);
+}
+
+// Expenses
+export async function getExpenses(userId: string, month?: string): Promise<Expense[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, EXPENSES_COLLECTION),
+    where("userId", "==", userId),
+    orderBy("date")
+  );
+  const snapshot = await getDocs(q);
+  const all = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Expense);
+  if (month) return all.filter((e) => e.date.startsWith(month));
+  return all;
+}
+
+export async function addExpense(
+  userId: string,
+  amount: number,
+  category: string,
+  subcategory: string,
+  description: string,
+  date: string
+): Promise<string> {
+  const db = getFirebaseDb();
+  const ref = await addDoc(collection(db, EXPENSES_COLLECTION), {
+    userId,
+    amount,
+    category,
+    subcategory,
+    description,
+    date,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function deleteExpense(expenseId: string) {
+  const db = getFirebaseDb();
+  await deleteDoc(doc(db, EXPENSES_COLLECTION, expenseId));
+}
+
+// Inventory
+export async function getInventory(userId: string): Promise<InventoryItem[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, INVENTORY_COLLECTION),
+    where("userId", "==", userId),
+    orderBy("updatedAt")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as InventoryItem);
+}
+
+export async function addInventoryItem(
+  userId: string,
+  name: string,
+  quantity: number,
+  unit: string,
+  icon: string,
+  lowThreshold: number
+): Promise<string> {
+  const db = getFirebaseDb();
+  const ref = await addDoc(collection(db, INVENTORY_COLLECTION), {
+    userId,
+    name,
+    quantity,
+    unit,
+    icon,
+    lowThreshold,
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateInventoryItem(
+  itemId: string,
+  data: Partial<Pick<InventoryItem, "name" | "quantity" | "unit" | "icon" | "lowThreshold">>
+) {
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, INVENTORY_COLLECTION, itemId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteInventoryItem(itemId: string) {
+  const db = getFirebaseDb();
+  await deleteDoc(doc(db, INVENTORY_COLLECTION, itemId));
 }
