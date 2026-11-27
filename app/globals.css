@@ -1496,3 +1496,22 @@ body {
 .firestore-toast-link:hover {
   background: var(--accent-hover);
 }
+
+/* ═══ Form Labels ═══ */
+.form-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-label-grow {
+  flex: 1;
+}
+
+.form-label-text {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

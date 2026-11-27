@@ -115,25 +115,32 @@ export default function InventoryView() {
             />
           </div>
           <div className="expense-form-row">
-            <input
-              type="number"
-              value={newQty}
-              onChange={(e) => setNewQty(e.target.value)}
-              placeholder="Ilość"
-              className="expense-amount-input"
-              min="0"
-            />
-            <select value={newUnit} onChange={(e) => setNewUnit(e.target.value)} className="expense-select">
-              {DEFAULT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select>
-            <input
-              type="number"
-              value={newThreshold}
-              onChange={(e) => setNewThreshold(e.target.value)}
-              placeholder="Alert gdy ≤"
-              className="expense-amount-input"
-              min="0"
-            />
+            <label className="form-label-group">
+              <span className="form-label-text">Ilość</span>
+              <input
+                type="number"
+                value={newQty}
+                onChange={(e) => setNewQty(e.target.value)}
+                className="expense-amount-input"
+                min="0"
+              />
+            </label>
+            <label className="form-label-group form-label-grow">
+              <span className="form-label-text">Jednostka</span>
+              <select value={newUnit} onChange={(e) => setNewUnit(e.target.value)} className="expense-select">
+                {DEFAULT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </label>
+            <label className="form-label-group">
+              <span className="form-label-text">Alert gdy ≤</span>
+              <input
+                type="number"
+                value={newThreshold}
+                onChange={(e) => setNewThreshold(e.target.value)}
+                className="expense-amount-input"
+                min="0"
+              />
+            </label>
           </div>
           <button type="submit" className="toolbar-btn" style={{ marginTop: "0.5rem" }}>Add</button>
         </form>
